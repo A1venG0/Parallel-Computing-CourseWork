@@ -54,10 +54,10 @@ public:
 		return send(m_socket, command.c_str(), command.size(), 0) != SOCKET_ERROR;
 	}
 
-	bool SendConfigurationData(int rows, int cols, int threadsCount, int* data)
+	bool SendConfigurationData(int rowsToSend, int colsToSend, int threadsCount, int rows, int cols, int* data)
 	{
-		if (send(m_socket, (char*)&rows, sizeof(int), 0) == SOCKET_ERROR ||
-			send(m_socket, (char*)&cols, sizeof(int), 0) == SOCKET_ERROR)
+		if (send(m_socket, (char*)&rowsToSend, sizeof(int), 0) == SOCKET_ERROR ||
+			send(m_socket, (char*)&colsToSend, sizeof(int), 0) == SOCKET_ERROR)
 		{
 			std::cerr << "Send matrix size failed: " << WSAGetLastError() << '\n';
 			return false;
@@ -192,8 +192,16 @@ int main()
 		return 1;
 	}
 	std::cout << "Received ACK for INIT" << '\n';
-
-	client.SendConfigurationData(rows, cols, threadsCount, data);
+	/*for (int i = 0; i < rows; i++)
+	{
+		for (int j = 0; j < cols; j++)
+		{
+			data[i * cols + j] = htonl(data[i * cols + j]);
+		}
+	}*/
+	int rowsToSend = htonl(rows), colsToSend = htonl(cols), threadsCountToSend = htonl(threadsCount);
+	client.SendConfigurationData(rowsToSend, colsToSend, threadsCountToSend, rows, cols, data);
+	/*client.SendConfigurationData(rows, cols, threadsCount, data);*/
 	std::cout << "Data configuration has been sent" << '\n';
 	//std::this_thread::sleep_for(std::chrono::seconds(3));
 	response = client.ReceiveResponse();

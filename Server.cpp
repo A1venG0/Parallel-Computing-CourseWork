@@ -287,19 +287,23 @@ private:
 		if (!ReceiveResponse(socket, response)) {
 			return false;
 		}*/
+		int receivedRows, receivedCols, receivedThreadsCount;
 
-		if (recv(client.clientSocket, (char*)&client.rows, sizeof(int), 0) != sizeof(int) ||
-			recv(client.clientSocket, (char*)&client.cols, sizeof(int), 0) != sizeof(int))
+		if (recv(client.clientSocket, (char*)&receivedRows, sizeof(int), 0) != sizeof(int) ||
+			recv(client.clientSocket, (char*)&receivedCols, sizeof(int), 0) != sizeof(int))
 		{
 			std::cerr << "Receive matrix size failed: " << WSAGetLastError() << '\n';
 			return false;
 		}
 
-		if (recv(client.clientSocket, (char*)&client.threadsNumber, sizeof(int), 0) != sizeof(int))
+		if (recv(client.clientSocket, (char*)&receivedThreadsCount, sizeof(int), 0) != sizeof(int))
 		{
 			std::cerr << "Receive threads number failed: " << WSAGetLastError() << '\n';
 			return false;
 		}
+		client.rows = ntohl(receivedRows);
+		client.cols = ntohl(receivedCols);
+		client.threadsNumber = ntohl(receivedThreadsCount);
 
 		client.datat = new int[client.rows * client.cols];
 
@@ -308,6 +312,13 @@ private:
 			std::cerr << "Receive matrix failed: " << WSAGetLastError() << '\n';
 			return false;
 		}
+		/*for (int i = 0; i < client.rows; i++)
+		{
+			for (int j = 0; j < client.cols; j++)
+			{
+				client.datat[i * client.cols + j] = ntohl(client.datat[i * client.cols + j]);
+			}
+		}*/
 
 		/*data = new int* [rows];
 
