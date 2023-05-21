@@ -91,6 +91,7 @@ private:
 		SOCKET clientSocket;
 		int rows;
 		int cols;
+		int threadsNumber;
 		int* datat;
 		Server::TaskState taskState;
 		std::thread taskThread;
@@ -100,9 +101,9 @@ private:
 
 		ClientInfo(const ClientInfo& other) : clientSocket(other.clientSocket),
 			rows(other.rows), cols(other.cols), datat(other.datat), taskState(other.taskState),
-			running(other.running) {};
+			running(other.running), threadsNumber(other.threadsNumber) {};
 		ClientInfo() : clientSocket(INVALID_SOCKET), rows(0), cols(0), datat(nullptr),
-			taskState(TaskState::Idle), running(true) {};
+			taskState(TaskState::Idle), running(true), threadsNumber(0) {};
 	};
 
 	void AcceptConnections()
@@ -153,7 +154,9 @@ private:
 				}
 				m_outputMutex.lock();
 				std::cout << "Data configuration has been received" << '\n';
+				m_outputMutex.unlock();
 				
+				m_outputMutex.lock();
 				for (int i = 0; i < client->rows; i++)
 				{
 					for (int j = 0; j < client->cols; j++)
@@ -161,8 +164,8 @@ private:
 						std::cout << client->datat[i * client->cols + j] << ' ';
 					}
 				}
-				m_outputMutex.unlock();
 				std::cout << '\n';
+				m_outputMutex.unlock();
 				SendResponse(client->clientSocket, "ACK");
 			}
 			else if (command == "STA")
@@ -229,18 +232,37 @@ private:
 
 	void TaskThreadFunction(std::shared_ptr<ClientInfo> client)
 	{
+		std::vector<std::thread> workers(client->threadsNumber);
+		int rowsPerThread = client->rows / client->threadsNumber;
 		int sum = 0;
-		for (int i = 0; i < client->rows; i++)
+		
+		for (int i = 0; i < client->threadsNumber; i++)
 		{
-			for (int j = 0; j < client->cols; j++)
-			{
-				sum += client->datat[i * client->cols + j];
+			int startRow = i * rowsPerThread;
+			int endRow = (i == client->threadsNumber - 1) ? client->rows : (i + 1) * rowsPerThread;
+			int threadSum = 0;
+
+			workers[i] = std::thread(&Server::calculateSum, this, startRow, endRow, client, threadSum, std::ref(sum));
+		}
+		for (int i = 0; i < client->threadsNumber; i++)
+			workers[i].join();
+
+		client->taskState = TaskState::Completed;
+		client->promise.set_value(sum);
+	}
+
+	void calculateSum(const int startRow, const int endRow, std::shared_ptr<ClientInfo> client, int threadSum, int& sum) {
+
+		for (int i = startRow; i < endRow; i++) {
+			for (int j = 0; j < client->cols; j++) {
+				threadSum += client->datat[i * client->cols + j];
 			}
 		}
 
-		client->taskState = TaskState::Completed;
+		m_sumMutex.lock();
+		sum += threadSum;
+		m_sumMutex.unlock();
 
-		client->promise.set_value(sum);
 	}
 
 	bool ReceiveCommand(SOCKET socket, std::string& command)
@@ -270,6 +292,12 @@ private:
 			recv(client.clientSocket, (char*)&client.cols, sizeof(int), 0) != sizeof(int))
 		{
 			std::cerr << "Receive matrix size failed: " << WSAGetLastError() << '\n';
+			return false;
+		}
+
+		if (recv(client.clientSocket, (char*)&client.threadsNumber, sizeof(int), 0) != sizeof(int))
+		{
+			std::cerr << "Receive threads number failed: " << WSAGetLastError() << '\n';
 			return false;
 		}
 
@@ -312,6 +340,7 @@ private:
 	SOCKET m_listenSocket;
 	bool m_running;
 	std::mutex m_taskMutex;
+	std::mutex m_sumMutex;
 	std::shared_mutex m_clientsMutex;
 	std::mutex m_outputMutex;
 	std::vector<std::shared_ptr<ClientInfo>> m_clients;
