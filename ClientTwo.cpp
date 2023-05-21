@@ -2,12 +2,13 @@
 #include <WinSock2.h>
 #include <thread>
 #include <ws2tcpip.h>
+#include <random>
 
-class Client
+class ClientTwo
 {
 public:
-	Client(std::string& serverIP, int port) : m_socket(INVALID_SOCKET), m_serverAddress(serverIP), m_port(port) {};
-	~Client()
+	ClientTwo(std::string& serverIP, int port) : m_socket(INVALID_SOCKET), m_serverAddress(serverIP), m_port(port) {};
+	~ClientTwo()
 	{
 		WSACleanup();
 		if (m_socket != INVALID_SOCKET)
@@ -93,7 +94,7 @@ public:
 			return "";*/
 		}
 		buffer[result] = '\0';
-		
+
 		return std::string(buffer);
 	}
 
@@ -120,7 +121,7 @@ public:
 	{
 		std::string response = SendGetCommand();
 		std::cout << "response from the server: " << response << '\n';
-		
+
 		if (response.substr(0, 6) == "STATE:") {
 			response = response.substr(6);
 		}
@@ -146,17 +147,17 @@ private:
 
 int main()
 {
+	std::mt19937 mt(time(nullptr));
 	std::string IP = "127.0.0.1";
-	auto client = Client(IP, 1234);
-	int rows = 3;
-	int cols = 3;
-	//std::unique_ptr<int[]> data = std::make_unique<int[]>(rows * cols);
+	auto client = ClientTwo(IP, 1234);
+	int rows = 4;
+	int cols = 4;
 	int* data = new int[rows * cols];
 	for (int i = 0; i < rows; i++)
 	{
 		for (int j = 0; j < cols; j++)
 		{
-			data[i * cols + j] = i + j;
+			data[i * cols + j] = 1 + mt() % 10;
 		}
 	}
 
@@ -170,6 +171,7 @@ int main()
 
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 	auto result = client.connectToServer();
+
 	std::cout << "client connected" << '\n';
 	result = client.SendInitCommand();
 	std::cout << "INIT command sent" << '\n';
@@ -178,6 +180,7 @@ int main()
 		delete[] data;
 		return 1;
 	}
+
 	auto response = client.ReceiveResponse();
 	if (response != "ACK") {
 		std::cerr << "ACK has not been sent from the server." << '\n';
@@ -185,7 +188,6 @@ int main()
 		return 1;
 	}
 	std::cout << "Received ACK for INTI" << '\n';
-
 	client.SendConfigurationData(rows, cols, data);
 	std::cout << "Data configuration has been sent" << '\n';
 	//std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -209,5 +211,7 @@ int main()
 
 	std::cout << "The sum is: " << response << '\n';
 	delete[] data;
+	char a;
+	std::cin >> a;
 	return 0;
 }
