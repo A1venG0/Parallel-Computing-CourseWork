@@ -175,7 +175,7 @@ int main()
 
 	std::cout << '\n';
 
-	std::this_thread::sleep_for(std::chrono::seconds(1));
+	std::this_thread::sleep_for(std::chrono::seconds(4));
 	auto result = client.connectToServer();
 	std::cout << "client connected" << '\n';
 	result = client.SendInitCommand();

@@ -95,7 +95,7 @@ private:
 		int* datat;
 		Server::TaskState taskState;
 		std::thread taskThread;
-		std::promise<int> promise;
+		/*std::promise<int> promise;*/
 		std::future<int> future;
 		bool running;
 
@@ -183,13 +183,14 @@ private:
 				}
 				else
 				{
-					std::promise<int> promise;
-					client->promise = std::move(promise);
-					client->future = client->promise.get_future();
+					/*std::promise<int> promise;
+					client->promise = std::move(promise);*/
+					/*client->future = client->promise.get_future();*/
 
 					client->taskState = TaskState::Running;
-					client->taskThread = std::thread(&Server::TaskThreadFunction, this, client);
-					client->taskThread.join();
+					client->future = std::async(std::launch::async, &Server::TaskThreadFunction, this, client);
+					/*client->taskThread = std::thread(&Server::TaskThreadFunction, this, client);
+					client->taskThread.join();*/
 				}
 			}
 			else if (command == "GET")
@@ -230,7 +231,7 @@ private:
 		
 	}
 
-	void TaskThreadFunction(std::shared_ptr<ClientInfo> client)
+	int TaskThreadFunction(std::shared_ptr<ClientInfo> client)
 	{
 		std::vector<std::thread> workers(client->threadsNumber);
 		int rowsPerThread = client->rows / client->threadsNumber;
@@ -248,7 +249,8 @@ private:
 			workers[i].join();
 
 		client->taskState = TaskState::Completed;
-		client->promise.set_value(sum);
+		/*client->promise.set_value(sum);*/
+		return sum;
 	}
 
 	void calculateSum(const int startRow, const int endRow, std::shared_ptr<ClientInfo> client, int threadSum, int& sum) {
