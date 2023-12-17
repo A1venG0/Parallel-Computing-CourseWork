@@ -151,83 +151,83 @@ private:
 	int m_port;
 };
 
-int main()
-{
-	std::mt19937 mt(time(nullptr));
-	std::string IP = "127.0.0.1";
-	auto client = ClientTwo(IP, 1234);
-	int rows = 4;
-	int cols = 4;
-	const int threadsCount = 4;
-	int* data = new int[rows * cols];
-	for (int i = 0; i < rows; i++)
-	{
-		for (int j = 0; j < cols; j++)
-		{
-			data[i * cols + j] = 1 + mt() % 10;
-		}
-	}
-
-	for (int i = 0; i < rows; i++)
-	{
-		for (int j = 0; j < cols; j++)
-			std::cout << data[i * cols + j] << ' ';
-	}
-
-	std::cout << '\n';
-
-	std::this_thread::sleep_for(std::chrono::seconds(1));
-	auto result = client.connectToServer();
-
-	std::cout << "client connected" << '\n';
-	result = client.SendInitCommand();
-	std::cout << "INIT command sent" << '\n';
-	if (!result) {
-		std::cerr << "Server initialization failed." << '\n';
-		delete[] data;
-		return 1;
-	}
-
-	auto response = client.ReceiveResponse();
-	if (response != "ACK") {
-		std::cerr << "ACK has not been sent from the server." << '\n';
-		delete[] data;
-		return 1;
-	}
-	std::cout << "Received ACK for INIT" << '\n';
-	/*for (int i = 0; i < rows; i++)
-	{
-		for (int j = 0; j < cols; j++)
-		{
-			data[i * cols + j] = htonl(data[i * cols + j]);
-		}
-	}*/
-	int rowsToSend = htonl(rows), colsToSend = htonl(cols), threadsCountToSend = htonl(threadsCount);
-	client.SendConfigurationData(rowsToSend, colsToSend, threadsCountToSend, rows, cols, data);
-	/*client.SendConfigurationData(rows, cols, threadsCount, data);*/
-	std::cout << "Data configuration has been sent" << '\n';
-	//std::this_thread::sleep_for(std::chrono::seconds(3));
-	response = client.ReceiveResponse();
-	if (response != "ACK") {
-		std::cerr << "ACK has not been sent from the server." << '\n';
-		delete[] data;
-		return 1;
-	}
-	std::cout << "Received ACK for Config" << '\n';
-	client.sendStartCommand();
-	std::cout << "Start command has been sent" << '\n';
-	//std::this_thread::sleep_for(std::chrono::seconds(3));
-	response = client.ReceiveResponse();
-	if (response != "STARTING") {
-		std::cerr << "Starting has not been sent from the server." << '\n';
-	}
-	std::cout << "Received Starting response" << '\n';
-	std::this_thread::sleep_for(std::chrono::seconds(3));
-	response = client.GetResult();
-
-	std::cout << "The sum is: " << response << '\n';
-	delete[] data;
-	char a;
-	std::cin >> a;
-	return 0;
-}
+//int main()
+//{
+//	std::mt19937 mt(time(nullptr));
+//	std::string IP = "127.0.0.1";
+//	auto client = ClientTwo(IP, 1234);
+//	int rows = 4;
+//	int cols = 4;
+//	const int threadsCount = 4;
+//	int* data = new int[rows * cols];
+//	for (int i = 0; i < rows; i++)
+//	{
+//		for (int j = 0; j < cols; j++)
+//		{
+//			data[i * cols + j] = 1 + mt() % 10;
+//		}
+//	}
+//
+//	for (int i = 0; i < rows; i++)
+//	{
+//		for (int j = 0; j < cols; j++)
+//			std::cout << data[i * cols + j] << ' ';
+//	}
+//
+//	std::cout << '\n';
+//
+//	std::this_thread::sleep_for(std::chrono::seconds(1));
+//	auto result = client.connectToServer();
+//
+//	std::cout << "client connected" << '\n';
+//	result = client.SendInitCommand();
+//	std::cout << "INIT command sent" << '\n';
+//	if (!result) {
+//		std::cerr << "Server initialization failed." << '\n';
+//		delete[] data;
+//		return 1;
+//	}
+//
+//	auto response = client.ReceiveResponse();
+//	if (response != "ACK") {
+//		std::cerr << "ACK has not been sent from the server." << '\n';
+//		delete[] data;
+//		return 1;
+//	}
+//	std::cout << "Received ACK for INIT" << '\n';
+//	/*for (int i = 0; i < rows; i++)
+//	{
+//		for (int j = 0; j < cols; j++)
+//		{
+//			data[i * cols + j] = htonl(data[i * cols + j]);
+//		}
+//	}*/
+//	int rowsToSend = htonl(rows), colsToSend = htonl(cols), threadsCountToSend = htonl(threadsCount);
+//	client.SendConfigurationData(rowsToSend, colsToSend, threadsCountToSend, rows, cols, data);
+//	/*client.SendConfigurationData(rows, cols, threadsCount, data);*/
+//	std::cout << "Data configuration has been sent" << '\n';
+//	//std::this_thread::sleep_for(std::chrono::seconds(3));
+//	response = client.ReceiveResponse();
+//	if (response != "ACK") {
+//		std::cerr << "ACK has not been sent from the server." << '\n';
+//		delete[] data;
+//		return 1;
+//	}
+//	std::cout << "Received ACK for Config" << '\n';
+//	client.sendStartCommand();
+//	std::cout << "Start command has been sent" << '\n';
+//	//std::this_thread::sleep_for(std::chrono::seconds(3));
+//	response = client.ReceiveResponse();
+//	if (response != "STARTING") {
+//		std::cerr << "Starting has not been sent from the server." << '\n';
+//	}
+//	std::cout << "Received Starting response" << '\n';
+//	std::this_thread::sleep_for(std::chrono::seconds(3));
+//	response = client.GetResult();
+//
+//	std::cout << "The sum is: " << response << '\n';
+//	delete[] data;
+//	char a;
+//	std::cin >> a;
+//	return 0;
+//}
