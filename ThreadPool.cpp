@@ -135,9 +135,9 @@ void ThreadPool::routine(int threadId)
 			};
 
 			waitCondition();
-			outputMutex.lock();
+			/*outputMutex.lock();
 			std::cout << "Thread " << threadId << " task acquired: " << taskAcquired << '\n';
-			outputMutex.unlock();
+			outputMutex.unlock();*/
 			/*outputMutex.lock();
 			overallWaitingTime += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() + std::chrono::duration_cast<std::chrono::milliseconds>(endTwo - startTwo).count();
 			outputMutex.unlock();*/

@@ -36,7 +36,7 @@ void InvertedIndex::RemoveDocument(int documentID)
 	}
 }
 
-std::unordered_set<int> InvertedIndex::Search(const std::string& query)
+void InvertedIndex::Search(const std::string& query, std::unordered_set<int>& result)
 {
 	std::vector<std::string> words = TokenizeString(query);
 
@@ -49,11 +49,12 @@ std::unordered_set<int> InvertedIndex::Search(const std::string& query)
 		{
 			it++;
 			if (it->first != words[i])
-				return {};
+				result = {};
 		}
-		return it->second;
+		result = it->second;
 	}
-	return {};
+	else
+		result = {};
 }
 
 void InvertedIndex::Clear()

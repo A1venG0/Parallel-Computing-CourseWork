@@ -67,15 +67,21 @@ public:
 			LoadInvertedIndexWithFiles("dataset\\" + std::to_string(1) + "\\", fileCount);
 		}
 		//threadPool.terminate();
-		std::this_thread::sleep_for(std::chrono::seconds(10));
+		//std::this_thread::sleep_for(std::chrono::seconds(10));
 		m_running = true;
-		auto docs = invertedIndex.Search("Sample");
-		for (auto& doc : docs)
+
+		/*std::unordered_set<int> docs;
+		threadPool.add_task([this, &docs]()
+			{
+				this->invertedIndex.Search("Sample", docs);
+			});*/
+		//invertedIndex.Search("Sample", docs);
+		/*for (auto& doc : docs)
 		{
 			std::cout << doc << ' ';
 		}
 
-		std::cout << '\n';
+		std::cout << '\n';*/
 		//delete threadPool;
 
 		AcceptConnections();
@@ -94,9 +100,6 @@ public:
 				threadPool.terminate();
 				for (auto& clientThread : m_clientThreads)
 					clientThread.join();
-				for (auto& client : m_clients) {
-					delete[] client->datat;
-				}
 			}
 			closesocket(m_listenSocket);
 			WSACleanup();
@@ -120,10 +123,8 @@ private:
 	struct ClientInfo
 	{
 		SOCKET clientSocket;
-		int rows;
-		int cols;
-		int threadsNumber;
-		int* datat;
+		std::string query;
+		std::unordered_set<int> result;
 		Server::TaskState taskState;
 		std::thread taskThread;
 		/*std::promise<int> promise;*/
@@ -131,10 +132,9 @@ private:
 		bool running;
 
 		ClientInfo(const ClientInfo& other) : clientSocket(other.clientSocket),
-			rows(other.rows), cols(other.cols), datat(other.datat), taskState(other.taskState),
-			running(other.running), threadsNumber(other.threadsNumber) {};
-		ClientInfo() : clientSocket(INVALID_SOCKET), rows(0), cols(0), datat(nullptr),
-			taskState(TaskState::Idle), running(true), threadsNumber(0) {};
+			query(other.query), taskState(other.taskState), running(other.running) {};
+		ClientInfo() : clientSocket(INVALID_SOCKET), query(""),
+			taskState(TaskState::Idle), running(true) {};
 	};
 
 	void AcceptConnections()
@@ -184,19 +184,9 @@ private:
 					continue;
 				}
 				m_outputMutex.lock();
-				std::cout << "Data configuration has been received" << '\n';
+				std::cout << "Data configuration has been received: " << client->query << '\n';
 				m_outputMutex.unlock();
 				
-				m_outputMutex.lock();
-				for (int i = 0; i < client->rows; i++)
-				{
-					for (int j = 0; j < client->cols; j++)
-					{
-						std::cout << client->datat[i * client->cols + j] << ' ';
-					}
-				}
-				std::cout << '\n';
-				m_outputMutex.unlock();
 				SendResponse(client->clientSocket, "ACK");
 			}
 			else if (command == "STA")
@@ -208,7 +198,8 @@ private:
 
 				std::unique_lock<std::mutex> lock(m_taskMutex);
 
-				if (client->future.valid())
+				//if (client->future.valid())
+				if (client->taskState == TaskState::Running)
 				{
 					SendResponse(client->clientSocket, "ERROR: Task already running");
 				}
@@ -219,7 +210,8 @@ private:
 					/*client->future = client->promise.get_future();*/
 
 					client->taskState = TaskState::Running;
-					client->future = std::async(std::launch::async, &Server::TaskThreadFunction, this, client);
+					threadPool.add_task([this, client]() { this->invertedIndex.Search(client->query, client->result); }); // stopped here (incorrect state)
+					//client->future = std::async(std::launch::async, &Server::TaskThreadFunction, this, client);
 					/*client->taskThread = std::thread(&Server::TaskThreadFunction, this, client);
 					client->taskThread.join();*/
 				}
@@ -229,7 +221,13 @@ private:
 				std::string stateStr;
 				std::string result;
 				
-				if (!client->future.valid())
+				if (client->taskState == TaskState::Idle)
+					stateStr = "IDLE";
+				else if (client->taskState == TaskState::Completed)
+					stateStr = "COMPLETED";
+				else
+					stateStr = "RUNNING";
+				/*if (!client->future.valid())
 					stateStr = "IDLE";
 				else if (client->future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 				{
@@ -238,10 +236,15 @@ private:
 				else
 				{
 					stateStr = "RUNNING";
-				}
+				}*/
 				result = "STATE:" + stateStr;
 				if (stateStr == "COMPLETED")
-					result += " RESULT:" + std::to_string(client->future.get());
+				{
+					result += " RESULT:";
+					for (auto it = client->result.begin(); it != client->result.end(); it++)
+						result += " " + *it;
+				}
+					
 				
 				m_outputMutex.lock();
 				std::cout << "Sending the result" << '\n';
@@ -262,29 +265,29 @@ private:
 		
 	}
 
-	int TaskThreadFunction(std::shared_ptr<ClientInfo> client)
-	{
-		std::vector<std::thread> workers(client->threadsNumber);
-		int rowsPerThread = client->rows / client->threadsNumber;
-		int sum = 0;
-		
-		for (int i = 0; i < client->threadsNumber; i++)
-		{
-			int startRow = i * rowsPerThread;
-			int endRow = (i == client->threadsNumber - 1) ? client->rows : (i + 1) * rowsPerThread;
-			int threadSum = 0;
+	//int TaskThreadFunction(std::shared_ptr<ClientInfo> client)
+	//{
+	//	std::vector<std::thread> workers(client->threadsNumber);
+	//	int rowsPerThread = client->rows / client->threadsNumber;
+	//	int sum = 0;
+	//	
+	//	for (int i = 0; i < client->threadsNumber; i++)
+	//	{
+	//		int startRow = i * rowsPerThread;
+	//		int endRow = (i == client->threadsNumber - 1) ? client->rows : (i + 1) * rowsPerThread;
+	//		int threadSum = 0;
 
-			workers[i] = std::thread(&Server::calculateSum, this, startRow, endRow, client, threadSum, std::ref(sum));
-		}
-		for (int i = 0; i < client->threadsNumber; i++)
-			workers[i].join();
+	//		workers[i] = std::thread(&Server::calculateSum, this, startRow, endRow, client, threadSum, std::ref(sum));
+	//	}
+	//	for (int i = 0; i < client->threadsNumber; i++)
+	//		workers[i].join();
 
-		client->taskState = TaskState::Completed;
-		/*client->promise.set_value(sum);*/
-		return sum;
-	}
+	//	client->taskState = TaskState::Completed;
+	//	/*client->promise.set_value(sum);*/
+	//	return sum;
+	//}
 
-	void calculateSum(const int startRow, const int endRow, std::shared_ptr<ClientInfo> client, int threadSum, int& sum) {
+	/*void calculateSum(const int startRow, const int endRow, std::shared_ptr<ClientInfo> client, int threadSum, int& sum) {
 
 		for (int i = startRow; i < endRow; i++) {
 			for (int j = 0; j < client->cols; j++) {
@@ -296,7 +299,7 @@ private:
 		sum += threadSum;
 		m_sumMutex.unlock();
 
-	}
+	}*/
 
 	bool ReceiveCommand(SOCKET socket, std::string& command)
 	{
@@ -316,55 +319,24 @@ private:
 
 	bool ReceiveData(ClientInfo& client)
 	{
-		/*std::string response;
-		if (!ReceiveResponse(socket, response)) {
-			return false;
-		}*/
-		int receivedRows, receivedCols, receivedThreadsCount;
-
-		if (recv(client.clientSocket, (char*)&receivedRows, sizeof(int), 0) != sizeof(int) ||
-			recv(client.clientSocket, (char*)&receivedCols, sizeof(int), 0) != sizeof(int))
+		int receivedQueryLength;
+		if (recv(client.clientSocket, (char*)&receivedQueryLength, sizeof(int), 0) != sizeof(int))
 		{
-			std::cerr << "Receive matrix size failed: " << WSAGetLastError() << '\n';
+			std::cerr << "Receive query length failed: " << WSAGetLastError() << '\n';
 			return false;
 		}
 
-		if (recv(client.clientSocket, (char*)&receivedThreadsCount, sizeof(int), 0) != sizeof(int))
+		int newReceivedQueryLength = ntohl(receivedQueryLength);
+		char* buffer = new char[newReceivedQueryLength];
+
+		if (recv(client.clientSocket, buffer, sizeof(char) * newReceivedQueryLength, 0) == SOCKET_ERROR)
 		{
-			std::cerr << "Receive threads number failed: " << WSAGetLastError() << '\n';
+			std::cerr << "Receive query failed: " << WSAGetLastError() << '\n';
+			delete[] buffer;
 			return false;
 		}
-		client.rows = ntohl(receivedRows);
-		client.cols = ntohl(receivedCols);
-		client.threadsNumber = ntohl(receivedThreadsCount);
 
-		client.datat = new int[client.rows * client.cols];
-
-		if (recv(client.clientSocket, (char*)client.datat, sizeof(int) * client.rows * client.cols, 0) == SOCKET_ERROR)
-		{
-			std::cerr << "Receive matrix failed: " << WSAGetLastError() << '\n';
-			return false;
-		}
-		/*for (int i = 0; i < client.rows; i++)
-		{
-			for (int j = 0; j < client.cols; j++)
-			{
-				client.datat[i * client.cols + j] = ntohl(client.datat[i * client.cols + j]);
-			}
-		}*/
-
-		/*data = new int* [rows];
-
-		for (int i = 0; i < rows; i++)
-		{
-			data[i] = new int[cols];
-			for (int j = 0; j < cols; j++)
-			{
-				data[i][j] = buffer[i * cols + j];
-			}
-		}
-
-		delete[] buffer;*/
+		client.query = std::string(buffer, newReceivedQueryLength);
 		return true;
 	}
 

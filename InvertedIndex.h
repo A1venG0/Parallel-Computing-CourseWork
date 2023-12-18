@@ -12,7 +12,7 @@ class InvertedIndex
 public:
 	void AddDocument(const std::string& document, int documentID);
 	void RemoveDocument(int documentID);
-	std::unordered_set<int> Search(const std::string& query);
+	void Search(const std::string& query, std::unordered_set<int>& result);
 	void Clear();
 	size_t Size();
 
