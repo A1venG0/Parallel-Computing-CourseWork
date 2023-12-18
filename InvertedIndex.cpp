@@ -3,12 +3,20 @@
 void InvertedIndex::AddDocument(const std::string& document, int documentID)
 {
 	std::vector<std::string> words = TokenizeString(document);
-
-	for (auto& word : words)
+	try
 	{
-		index[word].push_back(documentID);
-		reverseIndex[documentID].insert(word);
+		for (auto& word : words)
+		{
+			std::unique_lock<std::shared_mutex> _(readWriteMutex);
+			index[word].insert(documentID);
+			reverseIndex[documentID].insert(word);
+		}
 	}
+	catch (const std::exception& e)
+	{
+		std::cout << e.what() << '\n';
+	}
+	
 }
 
 void InvertedIndex::RemoveDocument(int documentID)
@@ -20,17 +28,19 @@ void InvertedIndex::RemoveDocument(int documentID)
 
 		for (auto& word : words)
 		{
-			std::vector<int>& docIDs = index[word];
-			docIDs.erase(std::remove(docIDs.begin(), docIDs.end(), documentID), docIDs.end());
+			std::unordered_set<int>& docIDs = index[word];
+			docIDs.erase(documentID);
 		}
 
 		reverseIndex.erase(it);
 	}
 }
 
-std::vector<int> InvertedIndex::Search(const std::string& query)
+std::unordered_set<int> InvertedIndex::Search(const std::string& query)
 {
 	std::vector<std::string> words = TokenizeString(query);
+
+	std::shared_lock<std::shared_mutex> _(readWriteMutex);
 
 	auto it = index.find(words[0]);
 	if (it != index.end())

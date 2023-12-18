@@ -6,6 +6,8 @@
 #include <vector>
 #include <shared_mutex>
 #include <future>
+#include <filesystem>
+#include <fstream>
 #include "ThreadPool.h"
 #include "InvertedIndex.h"
 
@@ -55,20 +57,29 @@ public:
 			return false;
 		}
 
-		threadPool = new ThreadPool();
+		//threadPool = new ThreadPool();
 
-		threadPool->initilize(NUMBER_OF_THREADS);
+		threadPool.initilize(NUMBER_OF_THREADS);
 
-		threadPool->add_task([this]() {
-			this -> invertedIndex.AddDocument("Sample document", 1);
-			});
-		threadPool->add_task([this]() {
-			this->invertedIndex.AddDocument("Sample document two", 2);
-			});
-
+		int fileCount = 0;
+		for (int i = 1; i <= 5; i++)
+		{
+			LoadInvertedIndexWithFiles("dataset\\" + std::to_string(1) + "\\", fileCount);
+		}
+		//threadPool.terminate();
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 		m_running = true;
-		AcceptConnections();
+		auto docs = invertedIndex.Search("Sample");
+		for (auto& doc : docs)
+		{
+			std::cout << doc << ' ';
+		}
 
+		std::cout << '\n';
+		//delete threadPool;
+
+		AcceptConnections();
+		
 		return true;
 	}
 
@@ -80,7 +91,7 @@ public:
 			m_running = false;
 			{
 				std::unique_lock<std::shared_mutex> lock(m_clientsMutex);
-				threadPool->terminate();
+				threadPool.terminate();
 				for (auto& clientThread : m_clientThreads)
 					clientThread.join();
 				for (auto& client : m_clients) {
@@ -94,7 +105,7 @@ public:
 
 	~Server()
 	{
-		delete threadPool;
+		//delete threadPool;
 	}
 
 	enum class TaskState
@@ -369,9 +380,32 @@ private:
 		return true;
 	}
 
+	void LoadInvertedIndexWithFiles(const std::string& directoryPath, int& fileCount)
+	{
+		for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
+			if (entry.is_regular_file()) {
+				std::ifstream file(entry.path());
+				fileCount++;
+				if (file.is_open()) {
+					std::string line;
+					while (std::getline(file, line)) {
+						threadPool.add_task([this, line, fileCount]() {
+							this->invertedIndex.AddDocument(line, fileCount);
+							});
+					}
+
+					file.close();
+				}
+				else {
+					std::cerr << "Unable to open file: " << entry.path().filename() << '\n';
+				}
+			}
+		}
+	}
+
 
 	SOCKET m_listenSocket;
-	ThreadPool* threadPool;
+	ThreadPool threadPool;
 	bool m_running;
 	std::mutex m_taskMutex;
 	std::mutex m_sumMutex;

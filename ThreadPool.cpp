@@ -97,9 +97,9 @@ void ThreadPool::routine(int threadId)
 		/*outputMutex.lock();
 		std::cout << "Thread " << threadId << " before the lock" << '\n';
 		outputMutex.unlock();*/
-		auto start = std::chrono::high_resolution_clock::now();
+		//auto start = std::chrono::high_resolution_clock::now();
 		threadFinishedMutex.lock();
-		auto end = std::chrono::high_resolution_clock::now();
+		//auto end = std::chrono::high_resolution_clock::now();
 		/*outputMutex.lock();
 		std::cout << "Thread " << threadId << " after the lock" << '\n';
 		outputMutex.unlock();*/
@@ -110,7 +110,7 @@ void ThreadPool::routine(int threadId)
 			outputMutex.unlock();*/
 			isRunning = true;
 			
-			//std::this_thread::sleep_for(std::chrono::seconds(45));
+			std::this_thread::sleep_for(std::chrono::seconds(1));
 
 			/*outputMutex.lock();
 			std::cout << "Thread " << threadId << " swapped the buffers" << '\n';
@@ -123,9 +123,9 @@ void ThreadPool::routine(int threadId)
 		bool taskAcquired = false;
 		std::function<void()> task;
 		{
-			auto startTwo = std::chrono::high_resolution_clock::now();
-			std::unique_lock<std::shared_mutex> _(readWriteMutex);;
-			auto endTwo = std::chrono::high_resolution_clock::now();
+			//auto startTwo = std::chrono::high_resolution_clock::now();
+			std::unique_lock<std::shared_mutex> _(readWriteMutex);
+			//auto endTwo = std::chrono::high_resolution_clock::now();
 			/*outputMutex.lock();
 			std::cout << "Thread " << threadId << " before the wait condition" << '\n';
 			outputMutex.unlock();*/
@@ -135,12 +135,12 @@ void ThreadPool::routine(int threadId)
 			};
 
 			waitCondition();
-			/*outputMutex.lock();
-			std::cout << "Thread " << threadId << " task acquired: " << taskAcquired << '\n';
-			outputMutex.unlock();*/
 			outputMutex.lock();
-			overallWaitingTime += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() + std::chrono::duration_cast<std::chrono::milliseconds>(endTwo - startTwo).count();
+			std::cout << "Thread " << threadId << " task acquired: " << taskAcquired << '\n';
 			outputMutex.unlock();
+			/*outputMutex.lock();
+			overallWaitingTime += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() + std::chrono::duration_cast<std::chrono::milliseconds>(endTwo - startTwo).count();
+			outputMutex.unlock();*/
 			if (isTerminated && !taskAcquired && tasksTwo.empty())
 				return;
 
