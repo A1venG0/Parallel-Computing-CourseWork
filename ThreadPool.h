@@ -7,11 +7,11 @@
 #include "TaskQueue.h"
 #include "TaskQueue.cpp"
 
-class threadPool
+class ThreadPool
 {
 public:
-	inline threadPool() = default;
-	inline ~threadPool() { terminate(); }
+	inline ThreadPool() = default;
+	inline ~ThreadPool() { terminate(); }
 
 	void initilize(const size_t threadCount);
 	void terminate();
@@ -38,10 +38,10 @@ public:
 		tasksTwo.emplace(bind);
 	}
 
-	threadPool(threadPool& pool) = delete;
-	threadPool(threadPool&& pool) = delete;
-	threadPool& operator=(threadPool& pool) = delete;
-	threadPool& operator=(threadPool&& pool) = delete;
+	ThreadPool(ThreadPool& pool) = delete;
+	ThreadPool(ThreadPool&& pool) = delete;
+	ThreadPool& operator=(ThreadPool& pool) = delete;
+	ThreadPool& operator=(ThreadPool&& pool) = delete;
 
 	long long overallWaitingTime = 0;
 

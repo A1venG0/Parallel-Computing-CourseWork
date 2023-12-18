@@ -1,17 +1,17 @@
 #include "ThreadPool.h"
 
-bool threadPool::working() const
+bool ThreadPool::working() const
 {
 	std::shared_lock<std::shared_mutex> _(readWriteMutex);
 	return workingUnsafe();
 }
 
-bool threadPool::workingUnsafe() const
+bool ThreadPool::workingUnsafe() const
 {
 	return isInitialized && !isTerminated;
 }
 
-void threadPool::initilize(const size_t threadCount)
+void ThreadPool::initilize(const size_t threadCount)
 {
 	std::unique_lock<std::shared_mutex> _(readWriteMutex);
 
@@ -24,12 +24,12 @@ void threadPool::initilize(const size_t threadCount)
 		outputMutex.lock();
 		std::cout << "A new thread has been created" << '\n';
 		outputMutex.unlock();
-		threads.emplace_back(&threadPool::routine, this, i);
+		threads.emplace_back(&ThreadPool::routine, this, i);
 	}
 	isInitialized = !threads.empty();
 }
 
-void threadPool::terminate()
+void ThreadPool::terminate()
 {
 	{
 		std::unique_lock<std::shared_mutex> _(readWriteMutex);
@@ -56,7 +56,7 @@ void threadPool::terminate()
 	isInitialized = false;
 }
 
-void threadPool::terminate_immidiately()
+void ThreadPool::terminate_immidiately()
 {
 	std::unique_lock<std::shared_mutex> _(readWriteMutex);
 	if (workingUnsafe())
@@ -84,13 +84,13 @@ void threadPool::terminate_immidiately()
 
 }
 
-void threadPool::temporarilyStopWorking(int givenTime)
+void ThreadPool::temporarilyStopWorking(int givenTime)
 {
 	std::this_thread::sleep_for(std::chrono::seconds(givenTime));
 }
 
 
-void threadPool::routine(int threadId)
+void ThreadPool::routine(int threadId)
 {
 	while (true)
 	{
@@ -110,7 +110,7 @@ void threadPool::routine(int threadId)
 			outputMutex.unlock();*/
 			isRunning = true;
 			
-			std::this_thread::sleep_for(std::chrono::seconds(45));
+			//std::this_thread::sleep_for(std::chrono::seconds(45));
 
 			/*outputMutex.lock();
 			std::cout << "Thread " << threadId << " swapped the buffers" << '\n';

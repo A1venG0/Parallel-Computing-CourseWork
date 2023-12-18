@@ -6,6 +6,8 @@
 #include <vector>
 #include <shared_mutex>
 #include <future>
+#include "ThreadPool.h"
+#include "InvertedIndex.h"
 
 
 class Server
@@ -53,6 +55,17 @@ public:
 			return false;
 		}
 
+		threadPool = new ThreadPool();
+
+		threadPool->initilize(NUMBER_OF_THREADS);
+
+		threadPool->add_task([this]() {
+			this -> invertedIndex.AddDocument("Sample document", 1);
+			});
+		threadPool->add_task([this]() {
+			this->invertedIndex.AddDocument("Sample document two", 2);
+			});
+
 		m_running = true;
 		AcceptConnections();
 
@@ -67,6 +80,7 @@ public:
 			m_running = false;
 			{
 				std::unique_lock<std::shared_mutex> lock(m_clientsMutex);
+				threadPool->terminate();
 				for (auto& clientThread : m_clientThreads)
 					clientThread.join();
 				for (auto& client : m_clients) {
@@ -77,6 +91,12 @@ public:
 			WSACleanup();
 		}
 	}
+
+	~Server()
+	{
+		delete threadPool;
+	}
+
 	enum class TaskState
 	{
 		Idle,
@@ -351,6 +371,7 @@ private:
 
 
 	SOCKET m_listenSocket;
+	ThreadPool* threadPool;
 	bool m_running;
 	std::mutex m_taskMutex;
 	std::mutex m_sumMutex;
@@ -358,7 +379,9 @@ private:
 	std::mutex m_outputMutex;
 	std::vector<std::shared_ptr<ClientInfo>> m_clients;
 	std::vector<std::thread> m_clientThreads;
+	InvertedIndex invertedIndex;
 	int m_port;
+	const int NUMBER_OF_THREADS = 4;
 };
 
 //int main()
