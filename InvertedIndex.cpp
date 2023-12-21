@@ -2,7 +2,8 @@
 
 void InvertedIndex::AddDocument(const std::string& document, int documentID)
 {
-	std::vector<std::string> words = TokenizeString(document);
+	std::vector<std::string> words;
+	TokenizeString(document, words);
 	try
 	{
 		for (auto& word : words)
@@ -36,25 +37,48 @@ void InvertedIndex::RemoveDocument(int documentID)
 	}
 }
 
-void InvertedIndex::Search(const std::string& query, std::unordered_set<int>& result)
+void InvertedIndex::Search(const std::string& query, std::unordered_set<int>& result, TaskState& taskState)
 {
-	std::vector<std::string> words = TokenizeString(query);
+	std::vector<std::string> words;
+	TokenizeString(query, words);
 
 	std::shared_lock<std::shared_mutex> _(readWriteMutex);
 
-	auto it = index.find(words[0]);
-	if (it != index.end())
+	try
 	{
-		for (int i = 1; i < words.size(); i++)
+		if (!words.empty())
 		{
-			it++;
-			if (it->first != words[i])
+			auto it = index.find(words[0]);
+			if (it != index.end()) {
+				int i = 1;
+				while (i < words.size() && it != index.end()) {
+					if (it->first != words[i]) {
+						result = {};
+						break;
+					}
+					i++;
+					it++;
+				}
+				if (i == words.size()) {
+					result = it->second;
+				}
+			}
+			else {
 				result = {};
+			}
 		}
-		result = it->second;
+		else
+		{
+			result = {};
+		}
+		taskState = TaskState::Completed;
+		
 	}
-	else
-		result = {};
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+	}
+	
 }
 
 void InvertedIndex::Clear()
@@ -68,10 +92,9 @@ size_t InvertedIndex::Size()
 	return index.size();
 }
 
-std::vector<std::string> InvertedIndex::TokenizeString(const std::string& document)
+void InvertedIndex::TokenizeString(const std::string& document, std::vector<std::string>& words)
 {
 	std::istringstream iss(document);
-	std::vector<std::string> words;
 	std::string word;
 
 	while (iss >> word) {
@@ -85,14 +108,13 @@ std::vector<std::string> InvertedIndex::TokenizeString(const std::string& docume
 	for (auto& word : words)
 	{
 		word.erase(std::remove_if(word.begin(), word.end(), [](char c) {
-			return std::ispunct(static_cast<unsigned char>(c));
+			auto temp = std::ispunct(static_cast<unsigned char>(c));
+			return temp;
 			}));
 	}
 
 	// Remove stop words
 	words.erase(std::remove_if(words.begin(), words.end(), [&stopWords](const std::string& word) {
 		return stopWords.find(word) != stopWords.end();
-		}), words.end());
-		
-	return words;
+		}), words.end());		
 }

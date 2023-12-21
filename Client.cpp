@@ -58,7 +58,7 @@ public:
 	{
 		int queryLength = htonl(query.length());
 		int normalQueryLength = query.length();
-		if (send(m_socket, (char*)&queryLength, sizeof(int), 0) == SOCKET_ERROR)
+		if (send(m_socket, reinterpret_cast<char*>(&queryLength), sizeof(int), 0) == SOCKET_ERROR)
 		{
 			std::cerr << "Send query failed: " << WSAGetLastError() << '\n';
 			return false;
@@ -94,7 +94,7 @@ public:
 			return "";*/
 		}
 		buffer[result] = '\0';
-		
+
 		return std::string(buffer);
 	}
 
@@ -121,7 +121,7 @@ public:
 	{
 		std::string response = SendGetCommand();
 		std::cout << "response from the server: " << response << '\n';
-		
+
 		if (response.substr(0, 6) == "STATE:") {
 			response = response.substr(6);
 		}
@@ -149,11 +149,7 @@ private:
 //{
 //	std::string IP = "127.0.0.1";
 //	auto client = Client(IP, 1234);
-//	int rows = 3;
-//	int cols = 3;
-//	const int threadsCount = 4;
-//	std::string query;
-//	std::cin >> query;
+//	std::string query = "meanwhile";
 //
 //	std::this_thread::sleep_for(std::chrono::seconds(4));
 //	auto result = client.connectToServer();
@@ -188,9 +184,12 @@ private:
 //		std::cerr << "Starting has not been sent from the server." << '\n';
 //	}
 //	std::cout << "Received Starting response" << '\n';
-//	std::this_thread::sleep_for(std::chrono::seconds(3));
+//	std::this_thread::sleep_for(std::chrono::seconds(6));
 //	response = client.GetResult();
 //
 //	std::cout << "The result is: " << response << '\n';
+//
+//	char key;
+//	std::cin >> key;
 //	return 0;
 //}

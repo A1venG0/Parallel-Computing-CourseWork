@@ -111,13 +111,6 @@ public:
 		//delete threadPool;
 	}
 
-	enum class TaskState
-	{
-		Idle,
-		Running,
-		Completed
-	};
-
 private:
 
 	struct ClientInfo
@@ -125,7 +118,7 @@ private:
 		SOCKET clientSocket;
 		std::string query;
 		std::unordered_set<int> result;
-		Server::TaskState taskState;
+		TaskState taskState;
 		std::thread taskThread;
 		/*std::promise<int> promise;*/
 		std::future<int> future;
@@ -210,7 +203,7 @@ private:
 					/*client->future = client->promise.get_future();*/
 
 					client->taskState = TaskState::Running;
-					threadPool.add_task([this, client]() { this->invertedIndex.Search(client->query, client->result); }); // stopped here (incorrect state)
+					threadPool.add_task([this, client]() { this->invertedIndex.Search(client->query, client->result, client->taskState); });
 					//client->future = std::async(std::launch::async, &Server::TaskThreadFunction, this, client);
 					/*client->taskThread = std::thread(&Server::TaskThreadFunction, this, client);
 					client->taskThread.join();*/
@@ -242,7 +235,7 @@ private:
 				{
 					result += " RESULT:";
 					for (auto it = client->result.begin(); it != client->result.end(); it++)
-						result += " " + *it;
+						result += " " + std::to_string(*it);
 				}
 					
 				
@@ -250,11 +243,10 @@ private:
 				std::cout << "Sending the result" << '\n';
 				m_outputMutex.unlock();
 				SendResponse(client->clientSocket, result);
-				client->running = false; // not sure about this one
+				client->running = false;
 				closesocket(client->clientSocket);
 			}
 			
-			//closesocket(clientSocket);
 		}
 		
 		{
@@ -264,42 +256,6 @@ private:
 		}
 		
 	}
-
-	//int TaskThreadFunction(std::shared_ptr<ClientInfo> client)
-	//{
-	//	std::vector<std::thread> workers(client->threadsNumber);
-	//	int rowsPerThread = client->rows / client->threadsNumber;
-	//	int sum = 0;
-	//	
-	//	for (int i = 0; i < client->threadsNumber; i++)
-	//	{
-	//		int startRow = i * rowsPerThread;
-	//		int endRow = (i == client->threadsNumber - 1) ? client->rows : (i + 1) * rowsPerThread;
-	//		int threadSum = 0;
-
-	//		workers[i] = std::thread(&Server::calculateSum, this, startRow, endRow, client, threadSum, std::ref(sum));
-	//	}
-	//	for (int i = 0; i < client->threadsNumber; i++)
-	//		workers[i].join();
-
-	//	client->taskState = TaskState::Completed;
-	//	/*client->promise.set_value(sum);*/
-	//	return sum;
-	//}
-
-	/*void calculateSum(const int startRow, const int endRow, std::shared_ptr<ClientInfo> client, int threadSum, int& sum) {
-
-		for (int i = startRow; i < endRow; i++) {
-			for (int j = 0; j < client->cols; j++) {
-				threadSum += client->datat[i * client->cols + j];
-			}
-		}
-
-		m_sumMutex.lock();
-		sum += threadSum;
-		m_sumMutex.unlock();
-
-	}*/
 
 	bool ReceiveCommand(SOCKET socket, std::string& command)
 	{
@@ -389,6 +345,7 @@ private:
 	int m_port;
 	const int NUMBER_OF_THREADS = 4;
 };
+
 
 //int main()
 //{
