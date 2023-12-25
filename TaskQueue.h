@@ -36,9 +36,9 @@ public:
 	{
 		std::unique_lock<std::shared_mutex> _(readWriteMutex);
 		tasks.emplace(std::forward<args>(params)...);
-		outputMutex.lock();
+		/*outputMutex.lock();
 		std::cout << "A new task is added to the queue" << '\n';
-		outputMutex.unlock();
+		outputMutex.unlock();*/
 	}
 
 	taskQueue(const taskQueue& queue);

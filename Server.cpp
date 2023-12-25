@@ -8,6 +8,7 @@
 #include <future>
 #include <filesystem>
 #include <fstream>
+#include <atomic>
 #include "ThreadPool.h"
 #include "InvertedIndex.h"
 
@@ -60,29 +61,19 @@ public:
 		//threadPool = new ThreadPool();
 
 		threadPool.initilize(NUMBER_OF_THREADS);
-
+		auto start = std::chrono::high_resolution_clock::now();
 		int fileCount = 0;
 		for (int i = 1; i <= 5; i++)
 		{
-			LoadInvertedIndexWithFiles("dataset\\" + std::to_string(1) + "\\", fileCount);
+			LoadInvertedIndexWithFiles("dataset\\" + std::to_string(i) + "\\", fileCount);
 		}
+
+		auto end = std::chrono::high_resolution_clock::now();
+		auto buildTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		std::cout << "Index building time: " << buildTime << " ms" << '\n';
 		//threadPool.terminate();
 		//std::this_thread::sleep_for(std::chrono::seconds(10));
 		m_running = true;
-
-		/*std::unordered_set<int> docs;
-		threadPool.add_task([this, &docs]()
-			{
-				this->invertedIndex.Search("Sample", docs);
-			});*/
-		//invertedIndex.Search("Sample", docs);
-		/*for (auto& doc : docs)
-		{
-			std::cout << doc << ' ';
-		}
-
-		std::cout << '\n';*/
-		//delete threadPool;
 
 		AcceptConnections();
 		
@@ -343,7 +334,7 @@ private:
 	std::vector<std::thread> m_clientThreads;
 	InvertedIndex invertedIndex;
 	int m_port;
-	const int NUMBER_OF_THREADS = 4;
+	const int NUMBER_OF_THREADS = 16;
 };
 
 

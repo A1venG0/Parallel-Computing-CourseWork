@@ -90,6 +90,7 @@ void ThreadPool::temporarilyStopWorking(int givenTime)
 }
 
 
+
 void ThreadPool::routine(int threadId)
 {
 	while (true)
@@ -149,14 +150,14 @@ void ThreadPool::routine(int threadId)
 				continue;
 			}
 		}
-		outputMutex.lock();
+		/*outputMutex.lock();
 		std::cout << "Thread " << threadId << " started task execution" << '\n';
-		outputMutex.unlock();
+		outputMutex.unlock();*/
 		task();
-		outputMutex.lock();
+		/*outputMutex.lock();
 		std::cout << "Task finished by " << threadId << '\n';
 		std::cout << "-----------------------------------" << '\n';
-		outputMutex.unlock();
+		outputMutex.unlock();*/
 	}
 	
 }
