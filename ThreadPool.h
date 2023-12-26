@@ -19,6 +19,8 @@ public:
 	void temporarilyStopWorking(int givenTime);
 	void routine(int threadId);
 
+	void waitForAll();
+
 	bool working() const;
 	bool workingUnsafe() const;
 

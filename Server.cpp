@@ -68,6 +68,8 @@ public:
 			LoadInvertedIndexWithFiles("dataset\\" + std::to_string(i) + "\\", fileCount);
 		}
 
+		threadPool.waitForAll();
+
 		auto end = std::chrono::high_resolution_clock::now();
 		auto buildTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 		std::cout << "Index building time: " << buildTime << " ms" << '\n';
@@ -301,6 +303,7 @@ private:
 
 	void LoadInvertedIndexWithFiles(const std::string& directoryPath, int& fileCount)
 	{
+		std::atomic<long> elapsedTime;
 		for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
 			if (entry.is_regular_file()) {
 				std::ifstream file(entry.path());
@@ -334,7 +337,7 @@ private:
 	std::vector<std::thread> m_clientThreads;
 	InvertedIndex invertedIndex;
 	int m_port;
-	const int NUMBER_OF_THREADS = 16;
+	const int NUMBER_OF_THREADS = 4;
 };
 
 

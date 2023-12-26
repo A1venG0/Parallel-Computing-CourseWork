@@ -21,9 +21,9 @@ void ThreadPool::initilize(const size_t threadCount)
 	threads.reserve(threadCount);
 	for (int i = 0; i < threadCount; i++)
 	{
-		outputMutex.lock();
+		/*outputMutex.lock();
 		std::cout << "A new thread has been created" << '\n';
-		outputMutex.unlock();
+		outputMutex.unlock();*/
 		threads.emplace_back(&ThreadPool::routine, this, i);
 	}
 	isInitialized = !threads.empty();
@@ -54,6 +54,12 @@ void ThreadPool::terminate()
 	threads.clear();
 	isTerminated = true;
 	isInitialized = false;
+}
+
+void ThreadPool::waitForAll()
+{
+	while (!tasks.empty() || !tasksTwo.empty())
+		continue;
 }
 
 void ThreadPool::terminate_immidiately()
